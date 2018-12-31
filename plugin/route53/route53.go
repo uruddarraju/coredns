@@ -171,12 +171,12 @@ func maybeUnescape(s string) (string, error) {
 
 		out += s[:i]
 
-		// Parse `\\xxx` in base 8 (2nd arg) and attempt to fit into
-		// 8-bit result (3rd arg).
 		li, ri := i+len(escapeSeq), i+len(escapeSeq)+3
 		if ri > len(s) {
 			return "", fmt.Errorf("invalid escape sequence: '%s%s'", escapeSeq, s[li:])
 		}
+		// Parse `\\xxx` in base 8 (2nd arg) and attempt to fit into
+		// 8-bit result (3rd arg).
 		n, err := strconv.ParseInt(s[li:ri], 8, 8)
 		if err != nil {
 			return "", fmt.Errorf("invalid escape sequence: '%s%s'", escapeSeq, s[li:ri])
@@ -184,14 +184,14 @@ func maybeUnescape(s string) (string, error) {
 
 		r := rune(n)
 		switch {
-		case r >= rune('a') && r <= rune('z'): // a-z. Route53 converts everything to lowercase.
-		case r >= rune('0') && r <= rune('9'): // 0-9
-		case r == rune('*'): // `*`
+		case r >= rune('a') && r <= rune('z'): // Route53 converts everything to lowercase.
+		case r >= rune('0') && r <= rune('9'):
+		case r == rune('*'):
 			if out != "" {
 				return "", errors.New("`*' ony supported as wildcard (leftmost label)")
 			}
-		case r == rune('-'): // `-`
-		case r == rune('.'): // `.`
+		case r == rune('-'):
+		case r == rune('.'):
 		default:
 			return "", fmt.Errorf("invalid character: %s%#03o", escapeSeq, r)
 		}

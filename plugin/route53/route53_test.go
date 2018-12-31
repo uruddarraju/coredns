@@ -278,7 +278,6 @@ func TestMaybeUnescape(t *testing.T) {
 		{escaped: `example\\0com`, wantErr: errors.New(`invalid escape sequence: '\\0co'`)},
 		// 7. Invalid escape sequence at the end.
 		{escaped: `example.com\\0`, wantErr: errors.New(`invalid escape sequence: '\\0'`)},
-		// 8. Invalid esample.com`, wantErr: errors.New(`invalid escape sequence: '\\0'`)},
 	} {
 		got, gotErr := maybeUnescape(tc.escaped)
 		if tc.wantErr != gotErr && !reflect.DeepEqual(tc.wantErr, gotErr) {
