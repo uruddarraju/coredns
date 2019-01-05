@@ -86,7 +86,7 @@ func TestEnsureRules(t *testing.T) {
 	}
 	for i, test := range tests {
 		rl, _ := NewList(policy.TypeDrop, false)
-		rl.ruleList = test.rules
+		rl.RuleList = test.rules
 
 		err := rl.EnsureEngine(engines)
 		if err != nil {
@@ -152,7 +152,7 @@ func TestEvaluate(t *testing.T) {
 	}
 	for i, tst := range tests {
 		rl, _ := NewList(policy.TypeDrop, false)
-		rl.ruleList = tst.rules
+		rl.RuleList = tst.rules
 		rl.EnsureEngine(engines)
 
 		state := request.Request{W: &test.ResponseWriter{}, Req: new(dns.Msg)}

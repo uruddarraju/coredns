@@ -10,7 +10,7 @@ func TestSetup(t *testing.T) {
 	tests := []struct {
 		input        string
 		shouldErr    bool
-		queryNbRules int //
+		queryNbRules int
 		replyNbRules int
 	}{
 		{`firewall`, true, 0, 0},
@@ -63,14 +63,13 @@ func TestSetup(t *testing.T) {
 			continue
 		}
 
-		if len(fw.query.ruleList) != test.queryNbRules {
-			t.Errorf("Test %v: Expected %v query rules but got %v", i, test.queryNbRules, len(fw.query.ruleList))
+		if len(fw.query.RuleList) != test.queryNbRules {
+			t.Errorf("Test %v: Expected %v query rules but got %v", i, test.queryNbRules, len(fw.query.RuleList))
 			continue
 		}
-		if len(fw.reply.ruleList) != test.replyNbRules {
-			t.Errorf("Test %v: Expected %v reply rules but got %v", i, test.replyNbRules, len(fw.reply.ruleList))
+		if len(fw.reply.RuleList) != test.replyNbRules {
+			t.Errorf("Test %v: Expected %v reply rules but got %v", i, test.replyNbRules, len(fw.reply.RuleList))
 			continue
 		}
-
 	}
 }

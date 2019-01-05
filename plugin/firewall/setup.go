@@ -132,13 +132,13 @@ func (p *firewall) enrollEngines(c *caddy.Controller) error {
 	for _, loc := range []*rule.List{p.query, p.reply} {
 		for _, re := range loc.RuleList {
 			if _, ok := p.engines[re.Name]; !ok {
-				names, ok := eng[re.plugin]
+				names, ok := eng[re.Plugin]
 				if !ok {
 					names = make(map[string]string)
-					eng[re.plugin] = names
+					eng[re.Plugin] = names
 				}
-				if _, ok := names[re.name]; !ok {
-					names[re.name] = re.name
+				if _, ok := names[re.Name]; !ok {
+					names[re.Name] = re.Name
 				}
 			}
 		}

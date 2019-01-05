@@ -11,35 +11,35 @@ import (
 
 type Element struct {
 	Name   string
-	plugin string
-	params []string
-	rule   policy.Rule
+	Plugin string
+	Params []string
+	Rule   policy.Rule
 }
 
 type List struct {
 	reply         bool
 	RuleList      []*Element
-	defaultPolicy int
+	DefaultPolicy int
 }
 
 func NewList(ifNoResult int, isReply bool) (*List, error) {
 	if ifNoResult >= policy.TypeCount {
 		return nil, fmt.Errorf("invalid default rulelist parameters: %v", ifNoResult)
 	}
-	return &List{reply: isReply, defaultPolicy: ifNoResult}, nil
+	return &List{reply: isReply, DefaultPolicy: ifNoResult}, nil
 }
 
 func (p *List) EnsureEngine(engines map[string]policy.Engine) error {
 	var err error
 	for _, re := range p.RuleList {
-		if re.rule == nil {
+		if re.Rule == nil {
 			e, ok := engines[re.Name]
 			if !ok {
-				return fmt.Errorf("unknown engine for plugin %s and name %s - cannot build the rule", re.plugin, re.Name)
+				return fmt.Errorf("unknown engine for plugin %s and name %s - cannot build the rule", re.Plugin, re.Name)
 			}
-			re.rule, err = e.BuildRule(re.params)
+			re.Rule, err = e.BuildRule(re.Params)
 			if err != nil {
-				return fmt.Errorf("cannot build rule for plugin %s, name %s and params %s - error is %s", re.plugin, re.Name, strings.Join(re.params, ","), err)
+				return fmt.Errorf("cannot build rule for plugin %s, name %s and params %s - error is %s", re.Plugin, re.Name, strings.Join(re.Params, ","), err)
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func (p *List) Evaluate(ctx context.Context, state request.Request, data map[str
 				return policy.TypeNone, fmt.Errorf("rulelist rule %v, with name %s - cannot build reply data for evaluation %s", i, r.Name, err)
 			}
 		}
-		pr, err := r.rule.Evaluate(rd)
+		pr, err := r.Rule.Evaluate(rd)
 		if err != nil {
 			return policy.TypeNone, fmt.Errorf("rulelist rule %v returned an error at evaluation %s", i, err)
 		}
@@ -108,5 +108,5 @@ func (p *List) Evaluate(ctx context.Context, state request.Request, data map[str
 		// if no result just continue on next rule
 	}
 	// if none of rule make a statement, then we return the default policy
-	return p.defaultPolicy, nil
+	return p.DefaultPolicy, nil
 }
