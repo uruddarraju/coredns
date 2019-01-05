@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/coredns/coredns/plugin/firewall/rule"
 	"github.com/coredns/coredns/plugin/pkg/policy"
 
 	"github.com/coredns/coredns/core/dnsserver"
@@ -38,9 +39,9 @@ func setup(c *caddy.Controller) error {
 		if err != nil {
 			return err
 		}
-		for _, loc := range []*ruleList{fw.query, fw.reply} {
+		for _, loc := range []*rule.List{fw.query, fw.reply} {
 			// now that all engines are known, ensure to have all rules completely created
-			err = loc.ensureRules(fw.engines)
+			err = loc.EnsureEngine(fw.engines)
 			if err != nil {
 				return err
 			}
@@ -63,7 +64,7 @@ func parse(c *caddy.Controller) (*firewall, error) {
 			return nil, c.Errf("one and only one paramater is expected after firewall : the location of the rulelist. It should be either query or reply")
 		}
 		location := opts[0]
-		var rl *ruleList
+		var rl *rule.List
 		switch location {
 		case "query":
 			rl = p.query
@@ -78,13 +79,14 @@ func parse(c *caddy.Controller) (*firewall, error) {
 			if err != nil {
 				return nil, err
 			}
-			rl.addRuleElement(r)
+
+			rl.RuleList = append(rl.RuleList, r)
 		}
 	}
 	return p, nil
 }
 
-func (p *firewall) parseOptionOrRule(c *caddy.Controller) (*ruleElement, error) {
+func (p *firewall) parseOptionOrRule(c *caddy.Controller) (*rule.Element, error) {
 	// by default, at least one engine is available : the ExpressionEngine
 	e := &policy.ExpressionEngine{}
 	switch c.Val() {
@@ -107,7 +109,7 @@ func (p *firewall) parseOptionOrRule(c *caddy.Controller) (*ruleElement, error) 
 		if err != nil {
 			return nil, err
 		}
-		return &ruleElement{"", name, params, r}, nil
+		return &rule.Element{"", name, params, r}, nil
 
 	default:
 		// we can only suppose it is an engine type(plugin name), name and args
@@ -119,18 +121,17 @@ func (p *firewall) parseOptionOrRule(c *caddy.Controller) (*ruleElement, error) 
 		name := args[0]
 		params := args[1:]
 		// as the Engine are not yet knowm, just create a ruleElement with the parameters.The Rule will be created later
-		return &ruleElement{plugin, name, params, nil}, nil
+		return &rule.Element{plugin, name, params, nil}, nil
 
 	}
 }
 
 func (p *firewall) enrollEngines(c *caddy.Controller) error {
-
 	var eng = make(map[string]map[string]string)
 	// build a Map of missing Engines needed to build all rules of the RuleLists
-	for _, loc := range []*ruleList{p.query, p.reply} {
-		for _, re := range loc.ruleList {
-			if _, ok := p.engines[re.name]; !ok {
+	for _, loc := range []*rule.List{p.query, p.reply} {
+		for _, re := range loc.RuleList {
+			if _, ok := p.engines[re.Name]; !ok {
 				names, ok := eng[re.plugin]
 				if !ok {
 					names = make(map[string]string)

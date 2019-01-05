@@ -1,4 +1,4 @@
-package firewall
+package rule
 
 import (
 	"context"
@@ -6,45 +6,42 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/coredns/coredns/request"
-	"github.com/miekg/dns"
-
 	"github.com/coredns/coredns/plugin/pkg/policy"
-
 	"github.com/coredns/coredns/plugin/test"
+	"github.com/coredns/coredns/request"
+
+	"github.com/miekg/dns"
 )
 
-// Stub Engine for test purposes
-
-type RuleStubEngine struct {
-	error  error
+type testEngine struct {
+	err    error
 	result int
 }
 
-func (r *RuleStubEngine) Evaluate(data interface{}) (int, error) {
-	return r.result, r.error
+func (r *testEngine) Evaluate(data interface{}) (int, error) {
+	return r.result, r.err
 }
 
-type StubEngine struct {
+type stubEngine struct {
 	name        string
 	alwaysError bool
 }
 
-func (e *StubEngine) BuildQueryData(ctx context.Context, state request.Request) (interface{}, error) {
+func (e *stubEngine) BuildQueryData(ctx context.Context, state request.Request) (interface{}, error) {
 	if e.alwaysError {
 		return nil, fmt.Errorf("engine %s is returning an error at buildQueryData", e.name)
 	}
 	return e.name, nil
 }
 
-func (e *StubEngine) BuildReplyData(ctx context.Context, state request.Request, query interface{}) (interface{}, error) {
+func (e *stubEngine) BuildReplyData(ctx context.Context, state request.Request, query interface{}) (interface{}, error) {
 	if e.alwaysError {
 		return nil, fmt.Errorf("engine %s is returning an error at buildReplyData", e.name)
 	}
 	return e.name, nil
 }
 
-func (e *StubEngine) BuildRule(args []string) (policy.Rule, error) {
+func (e *stubEngine) BuildRule(args []string) (policy.Rule, error) {
 	if e.alwaysError {
 		return nil, fmt.Errorf("engine %s is returning an error at BuildRule", e.name)
 	}
@@ -58,41 +55,40 @@ func (e *StubEngine) BuildRule(args []string) (policy.Rule, error) {
 			r = v
 		}
 	}
-	return &RuleStubEngine{err, r}, nil
+	return &testEngine{err, r}, nil
 }
 
 func TestEnsureRules(t *testing.T) {
-
 	engines := map[string]policy.Engine{
-		"good":  &StubEngine{"good", false},
-		"wrong": &StubEngine{"wrong", true},
+		"good":  &stubEngine{"good", false},
+		"wrong": &stubEngine{"wrong", true},
 	}
 
 	tests := []struct {
-		rules []*ruleElement
+		rules []*Element
 		error bool
 	}{
 		// unknown engine
-		{[]*ruleElement{{"plugin", "unknown", []string{}, nil},
+		{[]*Element{{"plugin", "unknown", []string{}, nil},
 			{"plugin", "good", []string{}, nil}},
 			true,
 		},
 		// invalid params
-		{[]*ruleElement{{"plugin", "wrong", []string{}, nil},
+		{[]*Element{{"plugin", "wrong", []string{}, nil},
 			{"plugin", "good", []string{}, nil}},
 			true,
 		},
 		// all ok
-		{[]*ruleElement{{"plugin", "good", []string{}, nil},
+		{[]*Element{{"plugin", "good", []string{}, nil},
 			{"plugin", "good", []string{}, nil}},
 			false,
 		},
 	}
 	for i, test := range tests {
-		rl, _ := newRuleList(policy.TypeDrop, false)
+		rl, _ := NewList(policy.TypeDrop, false)
 		rl.ruleList = test.rules
 
-		err := rl.ensureRules(engines)
+		err := rl.EnsureEngine(engines)
 		if err != nil {
 			if !test.error {
 				t.Errorf("Test %d : unexpected error at build rule : %s", i, err)
@@ -108,38 +104,38 @@ func TestEnsureRules(t *testing.T) {
 func TestEvaluate(t *testing.T) {
 
 	engines := map[string]policy.Engine{
-		"good":  &StubEngine{"good", false},
-		"wrong": &StubEngine{"wrong", true},
+		"good":  &stubEngine{"good", false},
+		"wrong": &stubEngine{"wrong", true},
 	}
 
 	tests := []struct {
-		rules []*ruleElement
+		rules []*Element
 		error bool
 		value int
 	}{
 
 		// error at query data
-		{[]*ruleElement{{"plugin", "wrong", []string{}, nil},
+		{[]*Element{{"plugin", "wrong", []string{}, nil},
 			{"plugin", "good", []string{}, nil}},
 			true, policy.TypeNone,
 		},
 		// error at reply data
-		{[]*ruleElement{{"plugin", "wrong", []string{}, nil},
+		{[]*Element{{"plugin", "wrong", []string{}, nil},
 			{"plugin", "good", []string{}, nil}},
 			true, policy.TypeNone,
 		},
 		// error returned by evaluation
-		{[]*ruleElement{{"plugin", "good", []string{"Error returned"}, nil},
+		{[]*Element{{"plugin", "good", []string{"Error returned"}, nil},
 			{"plugin", "good", []string{}, nil}},
 			true, policy.TypeNone,
 		},
 		// invalid value returned by evaluation
-		{[]*ruleElement{{"plugin", "good", []string{"123"}, nil},
+		{[]*Element{{"plugin", "good", []string{"123"}, nil},
 			{"plugin", "good", []string{}, nil}},
 			true, policy.TypeNone,
 		},
 		// a correct value is returned by the rulelist
-		{[]*ruleElement{
+		{[]*Element{
 			{"plugin", "good", []string{"0"}, nil},
 			{"plugin", "good", []string{"0"}, nil},
 			{"plugin", "good", []string{"0"}, nil},
@@ -147,7 +143,7 @@ func TestEvaluate(t *testing.T) {
 			false, policy.TypeAllow,
 		},
 		// no value is returned by the rulelist
-		{[]*ruleElement{
+		{[]*Element{
 			{"plugin", "good", []string{"0"}, nil},
 			{"plugin", "good", []string{"0"}, nil},
 			{"plugin", "good", []string{"0"}, nil}},
@@ -155,16 +151,16 @@ func TestEvaluate(t *testing.T) {
 		},
 	}
 	for i, tst := range tests {
-		rl, _ := newRuleList(policy.TypeDrop, false)
+		rl, _ := NewList(policy.TypeDrop, false)
 		rl.ruleList = tst.rules
-		rl.ensureRules(engines)
+		rl.EnsureEngine(engines)
 
 		state := request.Request{W: &test.ResponseWriter{}, Req: new(dns.Msg)}
 		state.Req.SetQuestion("example.org.", dns.TypeA)
 
 		ctx := context.TODO()
 		data := make(map[string]interface{})
-		result, err := rl.evaluate(ctx, state, data, engines)
+		result, err := rl.Evaluate(ctx, state, data, engines)
 		if err != nil {
 			if !tst.error {
 				t.Errorf("Test %d : unexpected error at evaluate rulelist : %s", i, err)
