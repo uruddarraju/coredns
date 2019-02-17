@@ -115,8 +115,8 @@ func (f *Forward) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg
 			if err == ErrCachedClosed { // Remote side closed conn, can only happen with TCP.
 				continue
 			}
-			// Retry with TCP if truncated and prefer_udp configured.
-			if ret != nil && ret.Truncated && !opts.forceTCP && f.opts.preferUDP {
+			// Retry with TCP if truncated.
+			if ret != nil && ret.Truncated && opts.forceTCP == false {
 				opts.forceTCP = true
 				continue
 			}
@@ -143,7 +143,7 @@ func (f *Forward) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg
 
 		// Check if the reply is correct; if not return FormErr.
 		if !state.Match(ret) {
-			debug.Hexdumpf(ret, "Wrong reply for id: %d, %s/%d", state.QName(), state.QType())
+			debug.Hexdumpf(ret, "Wrong reply for id: %d, %s/%d", ret.Id, state.QName(), state.QType())
 
 			formerr := state.ErrorMessage(dns.RcodeFormatError)
 			w.WriteMsg(formerr)
@@ -182,12 +182,6 @@ func (f *Forward) isAllowedDomain(name string) bool {
 	return true
 }
 
-// ForceTCP returns if TCP is forced to be used even when the request comes in over UDP.
-func (f *Forward) ForceTCP() bool { return f.opts.forceTCP }
-
-// PreferUDP returns if UDP is preferred to be used even when the request comes in over TCP.
-func (f *Forward) PreferUDP() bool { return f.opts.preferUDP }
-
 // List returns a set of proxies to be used for this client depending on the policy in f.
 func (f *Forward) List() []*Proxy { return f.p.List(f.proxies) }
 
@@ -211,8 +205,7 @@ const (
 
 // options holds various options that can be set.
 type options struct {
-	forceTCP  bool
-	preferUDP bool
+	forceTCP bool
 }
 
 const defaultTimeout = 5 * time.Second

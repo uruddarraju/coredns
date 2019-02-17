@@ -66,7 +66,11 @@ func (t *Transport) Dial(proto string) (*dns.Conn, bool, error) {
 	}
 	conn, err := dns.DialTimeout(proto, t.addr, timeout)
 	t.updateDialTimeout(time.Since(reqTime))
-	return conn, false, err
+	if err != nil {
+		return nil, false, err
+	}
+	conn.UDPSize = 4096
+	return conn, false, nil
 }
 
 // Connect selects an upstream, sends the request and waits for a response.
@@ -74,28 +78,21 @@ func (p *Proxy) Connect(ctx context.Context, state request.Request, opts options
 	start := time.Now()
 
 	proto := ""
-	switch {
-	case opts.forceTCP: // TCP flag has precedence over UDP flag
+	if opts.forceTCP {
 		proto = "tcp"
-	case opts.preferUDP:
-		proto = "udp"
-	default:
-		proto = state.Proto()
 	}
-
 	conn, cached, err := p.transport.Dial(proto)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set buffer size correctly for this client.
-	conn.UDPSize = uint16(state.Size())
-	if conn.UDPSize < 512 {
-		conn.UDPSize = 512
-	}
+	m := new(dns.Msg)
+	m.SetReply(state.Req)
+	m.Response = false
+	m.SetEdns0(4096, state.Do()) // default conn size, see Dial
 
 	conn.SetWriteDeadline(time.Now().Add(maxTimeout))
-	if err := conn.WriteMsg(state.Req); err != nil {
+	if err := conn.WriteMsg(m); err != nil {
 		conn.Close() // not giving it back
 		if err == io.EOF && cached {
 			return nil, ErrCachedClosed

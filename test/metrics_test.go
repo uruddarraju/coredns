@@ -143,13 +143,11 @@ func TestMetricsSeveralBlocs(t *testing.T) {
 example.org:0 {
 	prometheus %s
 	forward . 8.8.8.8:53 {
-       force_tcp
     }
 }
 google.com:0 {
 	prometheus %s
 	forward . 8.8.8.8:53 {
-       force_tcp
     }
 	cache
 }

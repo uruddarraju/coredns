@@ -216,7 +216,6 @@ func TestMetricsAvailableAfterReload(t *testing.T) {
 		prometheus ` + promAddress + `
 		cache
 		forward . 8.8.8.8 {
-           force_tcp
 		}
 	}`
 	inst, _, tcp, err := CoreDNSServerAndPorts(corefileWithMetrics)
@@ -270,7 +269,6 @@ func TestMetricsAvailableAfterReloadAndFailedReload(t *testing.T) {
 		prometheus ` + promAddress + `
 		cache
 		forward . 8.8.8.8 {
-           force_tcp
 		}
 	}`
 	invalidCorefileWithMetrics := `
@@ -278,7 +276,6 @@ func TestMetricsAvailableAfterReloadAndFailedReload(t *testing.T) {
 		prometheus ` + promAddress + `
 		cache
 		forward . 8.8.8.8 {
-           force_tcp
 		}
 		invalid
 	}`

@@ -169,15 +169,15 @@ func parseBlock(c *caddyfile.Dispenser, f *Forward) error {
 		}
 		f.hcInterval = dur
 	case "force_tcp":
+		// deprecate
 		if c.NextArg() {
 			return c.ArgErr()
 		}
-		f.opts.forceTCP = true
 	case "prefer_udp":
+		// deprecate
 		if c.NextArg() {
 			return c.ArgErr()
 		}
-		f.opts.preferUDP = true
 	case "tls":
 		args := c.RemainingArgs()
 		if len(args) > 3 {
