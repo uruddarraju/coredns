@@ -203,10 +203,18 @@ func (w *ResponseWriter) set(m *dns.Msg, key uint64, mt response.Type, duration 
 	// and key is valid
 	switch mt {
 	case response.NoError, response.Delegation:
+		// do not cache if cache disabled
+		if w.pcap < 0 {
+			return
+		}
 		i := newItem(m, w.now(), duration)
 		w.pcache.Add(key, i)
 
 	case response.NameError, response.NoData:
+		// do not cache if cache disabled
+		if w.ncap < 0 {
+			return
+		}
 		i := newItem(m, w.now(), duration)
 		w.ncache.Add(key, i)
 
